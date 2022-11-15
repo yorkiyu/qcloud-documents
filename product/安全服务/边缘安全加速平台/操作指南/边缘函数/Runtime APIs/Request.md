@@ -1,4 +1,4 @@
-`Request` 代表 HTTP 请求对象。可通过两种方式获得 Request 对象
+`Request` 代表 HTTP 请求对象，基于标准 [Request](https://developer.mozilla.org/en-US/docs/Web/API/Request) 进行了扩展。在边缘函数中，可通过两种方式获得 Request 对象
 
 - 使用 Request 构造函数创建一个 Request 对象，用于 Fetch API 的操作。
 - 通过 FetchEvent 对象的 request 属性，获得当前请求的 Request 对象。
