@@ -1,183 +1,272 @@
-**Request** 代表 HTTP 请求对象，基于标准 Request 进行了扩展，请参考 MDN 官方文档 [Request](https://developer.mozilla.org/en-US/docs/Web/API/Request)。在边缘函数中，可通过两种方式获得 Request 对象：
+代表 HTTP 请求对象。
 
-- 使用 Request 构造函数创建一个 Request 对象，用于 Fetch API 的操作。
-- 通过 FetchEvent 对象的 request 属性，获得当前请求的 Request 对象。
+- 可以通过 Request 构造函数来创建一个 Request 对象，用于后续的 fetch 操作。
+- 也可以通过 FetchEvent 对象的 request 属性，得到一个 Request 对象。
 
-## 构造函数
+## 语法
 
 ```typescript
-const request = new Request(input [, options])
+class Request {
+  readonly body: ReadableStream;
+  readonly bodyUsed: boolean;
+  readonly headers: Headers;
+  readonly method: string;
+  readonly url: string;
+  readonly version: string;
+  readonly redirect: string;
+  readonly maxFollow: number;
+  readonly cf: IncomingRequestCfProperties;
+
+  constructor(input: string | Request, init?: RequestInit);
+  arrayBuffer(): Promise<ArrayBuffer>;
+  blob(): Promise<Blob>;
+  clone(copyHeaders?: boolean): Request;
+  json(): Promise<object>;
+  text(): Promise<string>;
+  getCookies(): Cookies;
+  setCookies(cookies: Cookies): boolean;
+}
+
+class RequestInit {
+  method?: string;
+  headers?: object | Array<[string, string]> | Headers;
+  body?: string | Blob | ArrayBuffer | ArrayBufferView | ReadableStream;
+  version?: string;
+  redirect?: string;
+  maxFollow?: number;
+  copyHeaders?: boolean;
+  cf?: RequestInitCfProperties;
+}
+
+class RequestInitCfProperties {
+  resolveOverride?: string;
+  cacheEverything?: boolean;
+  cacheKey?: string;
+  cacheTtl?: number;
+  cacheTtlByStatus?: { [key: string]: number };
+}
+```
+
+## 构造方法
+
+```typescript
+let request = new Request(input [, options])
 ```
 
 ### 参数
 
-| <div style="width: 100px">参数名称</div> | <div style="width: 160px">类型</div> | <div style="width: 60px">必填</div> | 说明                                                                                                                                                 |
-| ---------------------------------------- | ------------------------------------ | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| input                                    | `string` &#124; `Request`            | 是                                  | 一个直接包含资源 url 的字符串<br/> 或拷贝已存在的 Request 对象，若 options 对象的 copyHeaders 属性为 false，则引用传入的 Request 对象的 headers 属性 |
-| options                                  | `RequestInit`                        | 否                                  | 初始化 Request 对象的属性值的选项                                                                                                                    |
+- input<br>定义将要 fetch 的资源，取值有：<br>
+  - 一个直接包含资源 url 的字符串。
+  - 已存在的 Request 对象：拷贝传入的 Request 对象属性，并设置到返回的 Request 对象中，若 options 对象的 copyHeaders 属性为 false，则引用传入的 Request 对象的 headers 属性。
+- options 可选<br>一个可选对象，包含希望被设置到返回的 Request 对象中的属性选项。
 
 #### RequestInit
 
-初始化 Request 对象的属性值选项
-| <div style="width: 100px">属性名</div> | <div style="width: 140px">类型</div> | <div style="width: 60px">必填</div> | <div style="width: 80px">默认值</div> | 说明 |
-| ---- | --- | --- | --- | --- |
-| method | `string` | 否 | GET | 请求方法，支持 `GET`、`POST`、…… |
-| headers | [`Headers`](https://cloud.tencent.com/document/product/1552/81903) | 否 | | 请求的头部信息 |
-| body | `string` &#124; <br/> `Blob` &#124; <br/> `ArrayBuffer` &#124; <br/>`ArrayBufferView` &#124; <br/> [`ReadableStream`](https://cloud.tencent.com/document/product/1552/81914) | 否 | | 请求体 |
-| redirect | `string` | 否 | follow | 重定向策略，支持 `manual`、`error` 和 `follow`（自动跟随重定向） |
-| maxFollow | `number` | 否 | 12 | 最大可重定向次数 |
-| version | `string` | 否 | HTTP/1.1 | HTTP 版本，支持 `HTTP/1.0`、`HTTP/1.1` 和 `HTTP/2.0` |
-| copyHeaders | `boolean` | 否 | | <b>非标准选项</b>，表示是否拷贝传入的 Request 对象的 headers 属性 |
-| cf | `RequestInitCfProperties` | 否 | | <b>非标准选项</b>，用于控制边缘函数处理该请求的行为 |
+- `method`：请求的方法，**必须是字符串类型，支持的最大长度为 4095，超出长度会被截断**。
+- `headers`：请求的头部信息，详情请参见 [Headers](https://cloud.tencent.com/document/product/1552/81903)。
+- `body`：请求体。
+- `redirect`：重定向策略，字符串类型，支持 `manual`、`error` 和 `follow`；默认为 `follow`，即自动跟随重定向。
+- `maxFollow`：最大可重定向次数，默认为 12。
+- `version`：HTTP 版本，字符串类型，目前支持 `HTTP/1.0`、`HTTP/1.1` 和 `HTTP/2.0`，默认为 `HTTP/1.1`。
+- `copyHeaders`：<b>非标准选项</b>，表示是否拷贝传入的 Request 对象的 headers 属性。
+- `cf`: <b>非标准选项</b>，用于控制边缘函数处理该请求的行为。
 
 #### RequestInitCfProperties
 
-非标准选项，用于控制边缘函数处理该请求的行为
-| <div style="width: 100px">属性名</div> | <div style="width: 200px">类型</div> | <div style="width: 60px">必填</div> | 说明 |
-| --- | --- | --- | --- |
-| resolveOverride | `string` | 否 | 在使用 fetch(event.request) 进行 CDN 回源时，用于指定源站域名（仅支持域名，如 www.qq.com，不支持指定 HTTP 协议或者端口号) |
-| cacheEverything | `boolean` | 否 | 缓存相关，用于指定缓存响应的所有头部 |
-| cacheKey | `string` | 否 | 缓存相关，用于指定自定义的缓存 key |
-| cacheTtl | `number` | 否 | 缓存相关，用于指定缓存时长(单位 s)，必需大于等于 0，等于 0 不缓存 |
-| cacheTtlByStatus | `{[key: string]: number}` | 否 | 缓存相关，用于根据状态码指定缓存时长(单位 s)，小于等于 0 不缓存 |
+一个对象，其中包含用于控制边缘函数处理该请求的行为的属性：
 
-## 实例属性
+- `resolveOverride`：在通过 `fetch(event.request)` 进行 CDN 回源时使用，用于指定源站域名(目前只支持域名，如 `www.qq.com`，不支持指定 HTTP 协议或者端口号)。
+- `cacheEverything`：缓存相关，用于指定缓存响应的所有头部。
+- `cacheKey`：缓存相关，用于指定自定义的缓存 key。
+- `cacheTtl`: 缓存相关，用于指定缓存时长(单位 s)，必需大于等于 0，等于 0 不缓存。
+- `cacheTtlByStatus`：缓存相关，用于根据状态码指定缓存时长(单位 s)，小于等于 0 不缓存。
 
-### body
+### 属性
 
-`readonly` `body：ReadableStream`
-
-请求体，[ReadableStream](https://cloud.tencent.com/document/product/1552/81914)
-
-### bodyUsed
-
-`readonly` `bodyUsed: boolean`
-
-标识请求体是否已读取
-
-### headers
-
-`readonly` `headers: Headers`
-
-请求头部，[Headers](https://cloud.tencent.com/document/product/1552/81903)
-
-### method
-
-`readonly` `method: string`
-
-请求方法，默认值为`GET`
-
-### redirect
-
-`readonly` `redirect: string`
-
-请求被重定向后的处理方式，可取值为：follow、error、manual；默认为 manual。
-
-### maxFollow
-
-`readonly` `maxFollow: number`
-
-请求最多可重定向的次数
-
-### url
-
-`readonly` `url: string;`
-
-请求的 url
-
-### version
-
-`readonly` `version: string`
-
-请求使用的 HTTP 协议版本
-
-### cf
-
-`readonly` `cf: IncomingRequestCfProperties`
-
-一个对象，其中包含了由边缘安全加速平台提供的与客户请求相关的属性
+- body: [ReadableStream](https://cloud.tencent.com/document/product/1552/81914)<br>请求体。
+- bodyUsed: `boolean`<br>标识请求体是否已读取。
+- headers: [Headers](https://cloud.tencent.com/document/product/1552/81903)<br>请求头部。
+- method: `string`<br>请求方法，缺省值为"GET"。
+- redirect: `string`<br>请求被重定向后的处理方式：follow、error、manual，默认为 manual。
+- maxFollow: `number`<br>请求最多可重定向的次数。
+- url: `string`<br>请求的 url。
+- version: `string`<br>请求使用的 HTTP 协议版本。
+- cf：`IncomingRequestCfProperties`<br>一个对象，其中包含了由边缘安全加速平台提供的与客户请求相关的属性。
 
 #### IncomingRequestCfProperties
 
-除了标准 [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) 对象的属性外，客户端请求的 `request.cf` 对象中还包含由边缘安全加速平台提供的与请求相关的一些其他信息。包含如下信息：
-| 属性名 | 类型 | 说明 | 示例值 |
-| --- | --- | --- | --- |
-| geo | `GeoProperties` | 一个对象，用于描述客户请求的位置 | |
+除了标准 `Request` 对象的属性外，客户请求的 `request.cf` 对象中还包含由边缘安全加速平台提供的与请求相关的一些其他信息。目前包含如下信息：
 
-#### GeoProperties
+- `geo`: 一个对象，用于描述客户请求的位置，其中包含如下数据：
+  - `asn`Number<br>自治区号，例如 12271。
+  - `countryName`String<br>国家名，例如 `"United States of America"`。
+  - `countryCodeAlpha2`String<br>国家的 ISO-3611 alpha2 代码，例如 `"US"`。
+  - `countryCodeAlpha3`String<br>国家的 ISO-3611 alpha3 代码，例如 `"USA"`。
+  - `countryCodeNumeric`String<br>国家的 ISO-3611 numeric 代码，例如 `"840"`。
+  - `regionName`String<br>区域名，例如 `"New York"`。
+  - `regionCode`String<br>区域代码，例如 `"US-NY"`。
+  - `cityName`String<br>城市名，例如 `"new york"`。
+  - `latitude`Number<br>经度，例如 40.742802。
+  - `longitude`Number<br>纬度，例如 -73.971199。
 
-一个对象，用于描述客户请求的位置
-| 属性名 | 类型 | 说明 | 示例值 |
-| --- | --- | --- | --- |
-| asn | `number` | 自治区号 | 12271 |
-| countryName | `string` | 国家名 | United States of America |
-| countryCodeAlpha2 | `string` | 国家的 ISO-3611 alpha2 代码 | US |
-| countryCodeAlpha3 | `string` | 国家的 ISO-3611 alpha3 代码 | USA |
-| countryCodeNumeric | `string` | 国家的 ISO-3611 numeric 代码 | 840 |
-| regionName | `string` | 区域名 | New York |
-| regionCode | `string` | 区域代码 | US-NY |
-| cityName | `string` | 城市名 | new york |
-| latitude | `number` | 经度 | 40.742802 |
-| longitude | `number` | 纬度 | -73.971199 |
+### 方法
 
-## 实例方法
+- arrayBuffer():  Promise&lt;ArrayBuffer&gt;<br>返回一个 Promise，包含一个 ArrayBuffer 对象，表示整个请求体。
+- blob():  Promise&lt;Blob&gt;<br>返回一个 Promise，包含一个 Blob 对象，表示整个请求体。
+- clone(copyHeaders?: boolean):  Request
+- 创建当前请求对象的副本，若未设置 copyHeaders 或者 copyHeaders 为 false，返回的副本 Request 对象将会引用 headers 成员。
+- <b>标准未提供 copyHeaders 参数，添加此参数主要是出于性能的考虑，避免无意义的拷贝。</b>
+- json():  Promise&lt;object&gt;<br>返回一个 Promise，包含一个 JSON 对象，表示整个请求体。
+- text():  Promise&lt;string&gt;<br>返回一个 Promise, 包含一个 string，表示整个请求体。
+- getCookies():  [Cookies](https://cloud.tencent.com/document/product/1552/81905)<br>获取 Cookies 对象，会自动解析 Cookie 头部，绑定 Cookies 对象到 Request。
+- setCookies([Cookies](https://cloud.tencent.com/document/product/1552/81905)):  boolean<br>设置 Cookies 对象，会忽略已有 Cookie 头部，以新设置的 Cookies 对象生成新的 Cookie 头部。
 
-### arrayBuffer
+## 示例
 
-`arrayBuffer(): Promise<ArrayBuffer>`
+### 创建请求对象
 
-返回一个 Promise，包含一个 [ArrayBuffer](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer) 对象，表示整个请求体。
+- 创建默认的请求对象
 
-### blob
+```js
+let url = "http://www.example.com/";
+let req = new Request(url);
 
-`blob(): Promise<Blob>`
+fetch(req).then((rsp) => {
+  // do something ...
+});
+```
 
-返回一个 Promise，包含一个 [Blob](https://developer.mozilla.org/en-US/docs/Web/API/Blob) 对象，表示整个请求体。
+- 根据已有的 Request 对象来创建
 
-### clone
+```js
+addEventListener("fetch", (event) => {
+  let req = new Request(event.request);
+  // do something ...
 
-`clone(copyHeaders?: boolean): Request`
+  fetch(req).then((rsp) => {
+    // do something ...
+    // event.respondWith(...);
+  });
+});
+```
 
-创建当前请求对象的副本，若未设置 copyHeaders 或者 copyHeaders 为 false，返回的副本 Request 对象将会引用 headers 成员。（标准未提供 copyHeaders 参数，添加此参数主要是出于性能的考虑，避免无意义的拷贝）
+此处 req 对象的 headers 成员，是直接引用 event.request's headers 成员。如需拷贝 headers，则需要添加 copyHeaders 选项。
 
-### json
+```js
+addEventListener("fetch", (event) => {
+  let req = new Request(event.request, { copyHeaders: true });
+  // do something ...
 
-`json(): Promise<object>`
+  fetch(req).then((rsp) => {
+    // do something ...
+    // event.respondWith(...);
+  });
+});
+```
 
-返回一个 Promise，包含一个 JSON 对象，表示整个请求体。
+- 通过 `RequestInit` 对象来设置新创建的 Request 对象
 
-### text
+```js
+let url = "http://www.example.com/";
+let req = new Request(url, {
+  method: "DELETE",
+  headers: {
+    "Content-Type": "application/x-www-form-urlencoded;charset=utf-8",
+  },
+  body: "id=100",
+});
+```
 
-`text(): Promise<string>`
+```js
+addEventListener("fetch", (event) => {
+  let req = new Request(event.request, {
+    method: "DELETE",
+  });
+  // do something ...
 
-返回一个 Promise, 包含一个 string，表示整个请求体。
+  fetch(req).then((rsp) => {
+    // do something ...
+    // event.respondWith(...);
+  });
+});
+```
 
-### getCookies
+### 读取请求体
 
-`getCookies(): Cookies`
+- 以文本方式读取
 
-获取 [Cookies](https://cloud.tencent.com/document/product/1552/81905) 对象，会自动解析 Cookie 头部，绑定 Cookies 对象到 Request。
-
-### setCookies
-
-`setCookies(values: Cookies): boolean`
-
-设置 [Cookies](https://cloud.tencent.com/document/product/1552/81905) 对象，会忽略已有 Cookie 头部，以新设置的 Cookies 对象生成新的 Cookie 头部。
-
-## 示例代码
-
-```typescript
-async function handleRequest() {
-    const request = new Request('https://www.qq.com');
-    const resA = await fetch(request);
+```js
+async function handleEvent(event) {
+  let data = await event.request.text();
+  log("data:" + data);
 }
 
-addEventListener('fetch', (event) => {
-  return event.respondWith(handleRequest(event));
+addEventListener("fetch", (event) => {
+  handleEvent(event);
+});
+```
+
+- 按 JSON 解析请求体
+
+```js
+let req = new Request("http://jsonplaceholder.typicode.com/posts/2", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    userId: 100,
+    title: "hello",
+  }),
+});
+
+req.json().then((post) => {
+  log("userId:", post.userId);
+  log("title:", post.title);
+});
+```
+
+### Cookies 对象操作
+
+- 获取 Cookies 对象
+
+```js
+const url = "http://qq.com";
+let req = new Request(url, {
+  method: "GET",
+  headers: {
+    Cookie: "k1=v1; k2=v2",
+  },
+});
+let h = req.headers.get("Cookie");
+log.info("cookie header:", h); // k1=v1; k2=v2
+
+let cookies = req.getCookies();
+let cks = cookies.get();
+// name: k1 value: v1
+// name: k2 value: v2
+for (let i = 0; i < cks.length; i++) {
+  log.info("name:", cks[i].name, "value:", cks[i].value);
 }
+
+h = req.headers.get("Cookie");
+log.info("cookie header:", h); // k1=v1; k2=v2
+```
+
+- 设置 Cookies 对象
+
+```js
+const url = "http://qq.com";
+let req = new Request(url);
+let cookies = new Cookies();
+cookies.set("k1", "v1");
+req.setCookies(cookies);
+
+cookies = req.getCookies();
+let ck = cookies.get();
+log.info("val:", ck.value); // v1
 ```
 
 ## 参考
 
-- [MDN 文档：Request](https://developer.mozilla.org/en-US/docs/Web/API/Request)
-- [代码案列：修改请求头](https://cloud.tencent.com/document/product/1552/81938)
+- [Request](https://developer.mozilla.org/en-US/docs/Web/API/Request)
