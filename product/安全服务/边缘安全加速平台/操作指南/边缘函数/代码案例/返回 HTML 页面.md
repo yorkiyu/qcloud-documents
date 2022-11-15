@@ -22,10 +22,6 @@ addEventListener('fetch', event => {
 });
 ````
 
-## 示例触发规则
-<img width="786" alt="image" src="https://user-images.githubusercontent.com/117053395/201570567-7f71d9b3-facb-4d2c-80d6-ddf6d9fae173.png">
-
-
 ## 示例预览
 <img width="609" alt="image" src="https://user-images.githubusercontent.com/117053395/201570530-cd559d8a-6d59-458a-8dbf-6097f92ad6d9.png">
 
