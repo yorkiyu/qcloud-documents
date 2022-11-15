@@ -23,6 +23,8 @@ addEventListener('fetch', event => {
 ````
 
 ## 示例预览
+在浏览器地址栏中输入边缘函数触发规则，即可预览到示例效果。
+
 <img width="609" alt="image" src="https://user-images.githubusercontent.com/117053395/201570530-cd559d8a-6d59-458a-8dbf-6097f92ad6d9.png">
 
 
